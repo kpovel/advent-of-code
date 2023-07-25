@@ -5,7 +5,11 @@ fn main() {
     let repeat_compartment = find_repeat_compartment(&file_content);
     let prioritized_compartmens = prioritize_compartment(&repeat_compartment);
 
-    println!("{}", prioritized_compartmens);
+    println!("Part 1: {}", prioritized_compartmens);
+
+    let repeat_compartment_group = group_repeat_compartment(&file_content);
+    let group_prior = prioritize_compartment(&repeat_compartment_group);
+    println!("Part 2: {}", group_prior);
 }
 
 fn prioritize_compartment(compartments: &str) -> u32 {
@@ -44,4 +48,39 @@ fn find_repeat_compartment(input: &str) -> String {
     }
 
     repeat_items
+}
+
+fn group_repeat_compartment(input: &str) -> String {
+    let splited_groups = split_groups(&input);
+    let mut repeat_items = String::from("");
+
+    for group in splited_groups.into_iter() {
+        let elves: Vec<&str> = group.split("\n").into_iter().collect();
+
+        for c in elves[0].chars().into_iter() {
+            match (elves[1].contains(c), elves[2].contains(c)) {
+                (true, true) => {
+                    repeat_items.push_str(&c.to_string());
+                    break;
+                }
+                _ => (),
+            }
+        }
+    }
+
+    repeat_items
+}
+
+fn split_groups(input: &str) -> Vec<String> {
+    let lines: Vec<&str> = input.lines().collect();
+    let mut split_groups: Vec<String> = vec![];
+
+    for chank in lines.chunks(3) {
+        split_groups.push(chank.join(
+            "
+",
+        ));
+    }
+
+    split_groups
 }
