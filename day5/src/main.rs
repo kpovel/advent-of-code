@@ -3,6 +3,37 @@ use std::fs;
 fn main() {
     let first_part = solve_first_part();
     println!("First part: {}", first_part);
+
+    let second_part = solve_second_part();
+    println!("Second part: {}", second_part);
+}
+
+fn solve_second_part() -> String {
+    let file_content = fs::read_to_string("input").unwrap();
+    let split_content: Vec<&str> = file_content.split("\n\n").collect();
+    let (raw_crates, procedures) = (split_content[0], split_content[1]);
+    let mut crate_stack = build_crates(raw_crates);
+
+    modern_move_crate(&mut crate_stack, procedures);
+
+    top_crates(&crate_stack)
+}
+
+fn modern_move_crate(crate_stack: &mut Vec<String>, procedures: &str) {
+    for p in procedures.trim().split("\n") {
+        let split_procedure: Vec<&str> = p.split(" ").collect();
+        let (move_crates, move_from, move_to) = (
+            split_procedure[1].parse::<usize>().unwrap(),
+            split_procedure[3].parse::<usize>().unwrap(),
+            split_procedure[5].parse::<usize>().unwrap(),
+        );
+
+        let crate_len = crate_stack[move_from - 1].len();
+        let moved_crates: String = crate_stack[move_from - 1]
+            .drain(crate_len - move_crates..)
+            .collect();
+        crate_stack[move_to - 1].push_str(&moved_crates);
+    }
 }
 
 fn solve_first_part() -> String {
