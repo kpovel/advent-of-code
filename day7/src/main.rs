@@ -18,8 +18,6 @@ fn solve_first_part() -> u32 {
         }
     }
 
-    normalize_dir_size(&mut dirs);
-
     total_size(&dirs)
 }
 
@@ -34,35 +32,24 @@ fn total_size(dirs: &HashMap<String, u32>) -> u32 {
     sum
 }
 
-fn normalize_dir_size(dirs: &mut HashMap<String, u32>) {
-    let mut keys: Vec<String> = dirs.keys().cloned().collect();
-    keys.sort_by(|a, b| b.cmp(&a));
-
-    for key in &keys {
-        let mut parent_path = match key.rfind('/') {
-            Some(index) => String::from(&key[..index]),
-            None => key.clone(),
-        };
-
-        while !parent_path.is_empty() {
-            let size = dirs[key];
-            *dirs.entry(parent_path.clone()).or_insert(0) += size;
-            parent_path = match parent_path.rfind('/') {
-                Some(index) => parent_path[..index].to_string(),
-                None => String::new(),
-            };
-        }
-    }
-}
-
 fn process_list(current_dir: &str, dirs: &mut HashMap<String, u32>, dir_content: &str) {
-    let split_content: Vec<&str> = dir_content.split(" ").into_iter().collect();
+    let split_content: Vec<&str> = dir_content.split_whitespace().collect();
     let is_file = !split_content[0].starts_with("$") && !split_content[0].starts_with("dir");
 
     if is_file {
-        let dir = dirs.entry(current_dir.to_string()).or_insert(0);
+        let file_size = split_content[0].parse::<u32>().unwrap();
+        let mut parent_path = current_dir.to_string();
 
-        *dir += split_content[0].parse::<u32>().unwrap();
+        loop {
+            *dirs.entry(parent_path.clone()).or_insert(0) += file_size;
+            if parent_path == "/" {
+                break;
+            }
+            parent_path = match parent_path.rfind('/') {
+                Some(index) if index > 0 => parent_path[..index].to_string(),
+                _ => String::from("/"),
+            };
+        }
     }
 }
 
