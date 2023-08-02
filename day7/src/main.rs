@@ -3,6 +3,38 @@ use std::{collections::HashMap, fs};
 fn main() {
     let first_part = solve_first_part();
     println!("First part: {}", first_part);
+
+    let second_part = solve_second_part();
+    println!("Second part: {}", second_part);
+}
+
+fn solve_second_part() -> u32 {
+    let file_content = fs::read_to_string("input").unwrap();
+    let mut current_directory = String::new();
+    let mut dirs: HashMap<String, u32> = HashMap::new();
+
+    for line in file_content.trim().split("\n").into_iter() {
+        let trim_line = line.trim();
+        match trim_line.starts_with("$ cd") {
+            true => change_directory(&mut current_directory, &trim_line),
+            false => process_list(&current_directory, &mut dirs, &trim_line),
+        }
+    }
+
+    deleted_dir_size(&dirs)
+}
+
+fn deleted_dir_size(dirs: &HashMap<String, u32>) -> u32 {
+    let mut dirs_size: Vec<&u32> = dirs.values().collect();
+    dirs_size.sort();
+
+    for x in &dirs_size {
+        if *dirs_size.last().unwrap() - *x < 40_000_000 {
+            return **x;
+        }
+    }
+
+    panic!("Are use right data?");
 }
 
 fn solve_first_part() -> u32 {
