@@ -16,18 +16,9 @@ fn solve_first_part() -> u32 {
     for l in file_content.trim().split("\n").into_iter() {
         let (first, second, third, fourth) = define_numbers(&l);
 
-        match (first <= third, second >= fourth) {
-            (true, true) => {
-                fully_contains += 1;
-                continue;
-            }
-            _ => (),
-        };
-
-        match (first >= third, second <= fourth) {
-            (true, true) => fully_contains += 1,
-            _ => (),
-        };
+        if first <= third && second >= fourth || first >= third && second <= fourth {
+            fully_contains += 1;
+        }
     }
 
     fully_contains
@@ -40,10 +31,9 @@ fn solve_second_task() -> u32 {
     for l in file_content.trim().split("\n").into_iter() {
         let (first, second, third, fourth) = define_numbers(&l);
 
-        match (second >= third, first <= fourth) {
-            (true, true) => overlap += 1,
-            _ => (),
-        };
+        if second >= third && first <= fourth {
+            overlap += 1;
+        }
     }
 
     overlap
@@ -57,3 +47,5 @@ fn define_numbers(line: &str) -> (u32, u32, u32, u32) {
 
     (nums[0], nums[1], nums[2], nums[3])
 }
+
+
