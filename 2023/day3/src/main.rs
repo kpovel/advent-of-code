@@ -1,5 +1,7 @@
 #![feature(let_chains)]
 
+use std::ops::Range;
+
 fn main() {
     let input1 = include_str!("input1");
     println!("First part: {}", first_part(&input1));
@@ -9,7 +11,13 @@ fn main() {
 struct EnginePart {
     part: u32,
     start_position: usize,
-    end_postion: usize,
+    end_position: usize,
+}
+
+fn check_adjacent_symbols(position_range: Range<usize>, line: &str) -> bool {
+    position_range
+        .map(|i| &line[i..i + 1])
+        .any(|s| !s.parse::<u32>().is_ok() && s != ".")
 }
 
 fn first_part(input: &str) -> u32 {
@@ -18,214 +26,81 @@ fn first_part(input: &str) -> u32 {
     split_input
         .iter()
         .map(|line| {
-            let mut engine_parts = vec![];
-            let mut part_start = None;
-            let mut part_value = 0;
+            line.chars()
+                .enumerate()
+                .fold(
+                    (vec![], None, 0),
+                    |(mut engine_parts, part_start, mut part_value), (position, char)| match char
+                        .to_digit(10)
+                    {
+                        Some(num) => {
+                            part_value = part_value * 10 + num;
 
-            line.chars().enumerate().for_each(|(position, char)| {
-                let parsed_char = char.to_digit(10) as Option<u32>;
+                            if position == line.len() - 1 {
+                                engine_parts.push(EnginePart {
+                                    part: part_value,
+                                    start_position: part_start.unwrap(),
+                                    end_position: position + 1,
+                                })
+                            }
 
-                if part_start.is_none() && parsed_char.is_some() {
-                    part_start = Some(position);
-                }
-
-                if let Some(num) = parsed_char {
-                    part_value = part_value * 10 + num;
-                }
-
-                if let Some(start) = part_start
-                    && parsed_char.is_none()
-                {
-                    engine_parts.push(EnginePart {
-                        part: part_value,
-                        start_position: start,
-                        end_postion: position,
-                    });
-
-                    part_value = 0;
-                    part_start = None;
-                } else if let Some(start) = part_start
-                    && position == line.len() - 1
-                {
-                    if parsed_char.is_none() {
-                        engine_parts.push(EnginePart {
-                            part: part_value,
-                            start_position: start,
-                            end_postion: position,
-                        });
-                    } else {
-                        engine_parts.push(EnginePart {
-                            part: part_value,
-                            start_position: start,
-                            end_postion: position + 1,
-                        });
-                    }
-                }
-            });
-
-            engine_parts
+                            (engine_parts, part_start.or(Some(position)), part_value)
+                        }
+                        None => {
+                            if let Some(start) = part_start {
+                                engine_parts.push(EnginePart {
+                                    part: part_value,
+                                    start_position: start,
+                                    end_position: position,
+                                });
+                            }
+                            (engine_parts, None, 0)
+                        }
+                    },
+                )
+                .0
         })
         .enumerate()
         .map(|(line_number, nums)| {
             nums.into_iter()
                 .filter_map(|n| {
                     let is_wall_top = line_number == 0;
-                    let is_wall_right = n.end_postion == split_input[line_number].len();
-                    let is_wall_buttom = line_number == split_input.len() - 1;
+                    let is_wall_right = n.end_position == split_input[line_number].len();
+                    let is_wall_bottom = line_number == split_input.len() - 1;
                     let is_wall_left = n.start_position == 0;
-                    let is_adjacent_symbol = |s: &str| {
-                        if let Ok(_) = s.parse::<u32>() {
-                            false
-                        } else if s == "." {
-                            false
-                        } else {
-                            true
-                        }
+
+                    let horizontal_range = match (is_wall_left, is_wall_right) {
+                        (true, true) => n.start_position..n.end_position,
+                        (true, false) => n.start_position..n.end_position + 1,
+                        (false, true) => n.start_position - 1..n.end_position,
+                        (false, false) => n.start_position - 1..n.end_position + 1,
+                    };
+                    let left_range = if is_wall_left {
+                        0..0
+                    } else {
+                        n.start_position - 1..n.end_position
+                    };
+                    let right_range = if is_wall_left {
+                        n.end_position..n.end_position + 1
+                    } else {
+                        n.end_position..n.end_position + 1
                     };
 
-                    if is_wall_top && is_wall_left {
-                        for i in n.start_position..n.end_postion + 1 {
-                            let buttom_symbol = &split_input[line_number + 1][i..i + 1];
-                            if is_adjacent_symbol(buttom_symbol) {
-                                return Some(n);
-                            }
-                        }
+                    let adjacent_top = !is_wall_top
+                        && check_adjacent_symbols(
+                            horizontal_range.clone(),
+                            &split_input[line_number - 1],
+                        );
+                    let adjacent_bottom = !is_wall_bottom
+                        && check_adjacent_symbols(horizontal_range, &split_input[line_number + 1]);
+                    let adjacent_left = !is_wall_left
+                        && check_adjacent_symbols(left_range, &split_input[line_number]);
+                    let adjacent_right = !is_wall_right
+                        && check_adjacent_symbols(right_range, &split_input[line_number]);
 
-                        if is_adjacent_symbol(
-                            &split_input[line_number][n.end_postion..n.end_postion + 1],
-                        ) {
-                            return Some(n);
-                        }
-
-                        None
-                    } else if is_wall_top && is_wall_right {
-                        for i in n.start_position - 1..n.end_postion {
-                            let top_symbol = &split_input[line_number + 1][i..i + 1];
-                            if is_adjacent_symbol(top_symbol) {
-                                return Some(n);
-                            }
-                        }
-
-                        if is_adjacent_symbol(
-                            &split_input[line_number][n.start_position - 1..n.start_position],
-                        ) {
-                            return Some(n);
-                        }
-
-                        None
-                    } else if is_wall_top {
-                        for i in n.start_position - 1..n.end_postion + 1 {
-                            let symbol = &split_input[line_number + 1][i..i + 1];
-                            if is_adjacent_symbol(symbol) {
-                                return Some(n);
-                            }
-                        }
-
-                        if is_adjacent_symbol(
-                            &split_input[line_number][n.end_postion..n.end_postion + 1],
-                        ) || is_adjacent_symbol(
-                            &split_input[line_number][n.start_position - 1..n.start_position],
-                        ) {
-                            return Some(n);
-                        }
-
-                        None
-                    } else if is_wall_buttom && is_wall_left {
-                        for i in n.start_position..n.end_postion + 1 {
-                            let symbol = &split_input[line_number - 1][i..i + 1];
-                            if is_adjacent_symbol(symbol) {
-                                return Some(n);
-                            }
-                        }
-
-                        if is_adjacent_symbol(
-                            &split_input[line_number][n.end_postion..n.end_postion + 1],
-                        ) {
-                            return Some(n);
-                        }
-
-                        None
-                    } else if is_wall_buttom && is_wall_right {
-                        for i in n.start_position - 1..n.end_postion {
-                            let symbol = &split_input[line_number - 1][i..i + 1];
-                            if is_adjacent_symbol(symbol) {
-                                return Some(n);
-                            }
-                        }
-
-                        if is_adjacent_symbol(
-                            &split_input[line_number][n.start_position - 1..n.start_position],
-                        ) {
-                            return Some(n);
-                        }
-
-                        None
-                    } else if is_wall_buttom {
-                        for i in n.start_position - 1..n.end_postion + 1 {
-                            let symbol = &split_input[line_number - 1][i..i + 1];
-                            if is_adjacent_symbol(symbol) {
-                                return Some(n);
-                            }
-                        }
-
-                        if is_adjacent_symbol(
-                            &split_input[line_number][n.end_postion..n.end_postion + 1],
-                        ) || is_adjacent_symbol(
-                            &split_input[line_number][n.start_position - 1..n.start_position],
-                        ) {
-                            return Some(n);
-                        }
-
-                        None
-                    } else if is_wall_left {
-                        for i in n.start_position..n.end_postion + 1 {
-                            let top_symbol = &split_input[line_number - 1][i..i + 1];
-                            let buttom_symbol = &split_input[line_number + 1][i..i + 1];
-                            if is_adjacent_symbol(top_symbol) || is_adjacent_symbol(buttom_symbol) {
-                                return Some(n);
-                            }
-                        }
-
-                        if is_adjacent_symbol(
-                            &split_input[line_number][n.end_postion..n.end_postion + 1],
-                        ) {
-                            return Some(n);
-                        }
-
-                        None
-                    } else if is_wall_right {
-                        for i in n.start_position - 1..n.end_postion {
-                            let top_symbol = &split_input[line_number - 1][i..i + 1];
-                            let buttom_symbol = &split_input[line_number + 1][i..i + 1];
-                            if is_adjacent_symbol(top_symbol) || is_adjacent_symbol(buttom_symbol) {
-                                return Some(n);
-                            }
-                        }
-
-                        if is_adjacent_symbol(
-                            &split_input[line_number][n.start_position - 1..n.start_position],
-                        ) {
-                            return Some(n);
-                        }
-
-                        None
+                    if adjacent_top || adjacent_bottom || adjacent_left || adjacent_right {
+                        Some(n)
                     } else {
-                        for i in n.start_position - 1..n.end_postion + 1 {
-                            let top_symbol = &split_input[line_number - 1][i..i + 1];
-                            let buttom_symbol = &split_input[line_number + 1][i..i + 1];
-                            if is_adjacent_symbol(top_symbol) || is_adjacent_symbol(buttom_symbol) {
-                                return Some(n);
-                            }
-                        }
-
-                        if is_adjacent_symbol(
-                            &split_input[line_number][n.end_postion..n.end_postion + 1],
-                        ) || is_adjacent_symbol(
-                            &split_input[line_number][n.start_position - 1..n.start_position],
-                        ) {
-                            return Some(n);
-                        }
-
                         None
                     }
                 })
